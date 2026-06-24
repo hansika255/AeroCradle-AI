@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cat's Cradle Pro - Interactive Step Guide</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#020810;overflow:hidden;font-family:'Courier New',monospace;user-select:none;}
+#wrap{position:relative;width:100vw;height:100vh;}
+video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.45;filter:grayscale(.4);}
+canvas{position:absolute;top:0;left:0;}
+#scanlines{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);}
+#vignette{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;
+  background:radial-gradient(ellipse at center,transparent 50%,rgba(2,8,16,.8) 100%);}
+.corner{position:absolute;width:28px;height:28px;z-index:10;}
+#c-tl{top:14px;left:14px;border-top:1px solid rgba(0,245,255,.6);border-left:1px solid rgba(0,245,255,.6);}
+#c-tr{top:14px;right:14px;border-top:1px solid rgba(0,245,255,.6);border-right:1px solid rgba(0,245,255,.6);}
+#c-bl{bottom:14px;left:14px;border-bottom:1px solid rgba(0,245,255,.6);border-left:1px solid rgba(0,245,255,.6);}
+#c-br{bottom:14px;right:14px;border-bottom:1px solid rgba(0,245,255,.6);border-right:1px solid rgba(0,245,255,.6);}
+#hud{position:absolute;top:18px;left:50%;transform:translateX(-50%);text-align:center;z-index:10;pointer-events:none;min-width:340px;}
+#hud h1{color:#00f5ff;font-size:.9rem;letter-spacing:.38em;text-transform:uppercase;text-shadow:0 0 20px #00f5ff;margin-bottom:4px;}
+#status{color:rgba(0,245,255,.48);font-size:.58rem;letter-spacing:.12em;min-height:13px;}
+#pat-name{color:rgba(255,220,0,.85);font-size:.62rem;letter-spacing:.13em;margin-top:3px;min-height:14px;text-shadow:0 0 12px rgba(255,220,0,.5);}
+#fps{position:absolute;top:18px;right:18px;color:rgba(0,245,255,.3);font-size:.52rem;letter-spacing:.08em;z-index:10;pointer-events:none;}
+#controls{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;flex-wrap:wrap;justify-content:center;}
+.btn{background:rgba(0,245,255,.06);border:1px solid rgba(0,245,255,.3);color:rgba(0,245,255,.8);
+  font-family:'Courier New',monospace;font-size:.56rem;letter-spacing:.1em;padding:6px 15px;
+  cursor:pointer;text-transform:uppercase;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:rgba(0,245,255,.16);border-color:rgba(0,245,255,.65);color:#00f5ff;box-shadow:0 0 14px rgba(0,245,255,.2);}
+.btn.red{border-color:rgba(255,80,80,.45);color:rgba(255,130,130,.8);}
+.btn.red:hover{background:rgba(255,60,60,.12);border-color:rgba(255,80,80,.75);color:#ff5555;}
+.btn.green{border-color:rgba(0,255,150,.45);color:rgba(150,255,200,.85);}
+.btn.green:hover{background:rgba(0,255,100,.12);border-color:rgba(0,255,150,.85);color:#00ff96;}
+#hint{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);color:#00f5ff;
+  font-size:.65rem;letter-spacing:.1em;text-align:center;z-index:10;pointer-events:none;white-space:nowrap;background:rgba(2,8,16,.85);padding:6px 16px;border:1px solid rgba(0,245,255,.3);border-radius:4px;text-shadow:0 0 8px #00f5ff;}
+#overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:12;text-align:center;pointer-events:none;transition:opacity .5s;}
+#overlay.gone{opacity:0;pointer-events:none;}
+#overlay .big{color:rgba(0,245,255,.65);font-size:.85rem;letter-spacing:.18em;margin-bottom:10px;}
+#overlay p{color:rgba(0,245,255,.38);font-size:.6rem;letter-spacing:.09em;margin:4px 0;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <video id="vid" autoplay playsinline muted></video>
+  <canvas id="cv"></canvas>
+  <div id="scanlines"></div>
+  <div id="vignette"></div>
+  <div class="corner" id="c-tl"></div><div class="corner" id="c-tr"></div>
+  <div class="corner" id="c-bl"></div><div class="corner" id="c-br"></div>
+  <div id="hud">
+    <h1>Cat's Cradle</h1>
+    <div id="status">initializing…</div>
+    <div id="pat-name"></div>
+  </div>
+  <div id="fps"></div>
+  <div id="overlay">
+    <div class="big">BRING BOTH HANDS INTO FRAME</div>
+    <p>☝️ Touch tips together to smoothly shift loops between fingers</p>
+    <p>↔️ Pull away to expand the geometric layout</p>
+    <p>✊ Curl any finger inward toward your palm to drop its loop</p>
+  </div>
+  <div id="hint">Click "START GUIDE" to begin interactive steps!</div>
+  <div id="controls">
+    <button class="btn red" id="btn-reset">↺ Reset</button>
+    <button class="btn green" id="btn-guide">💡 Start Guide</button>
+    <button class="btn" id="btn-cradle">Cat's Cradle</button>
+    <button class="btn" id="btn-soldier">Soldier's Bed</button>
+    <button class="btn" id="btn-ladder">Jacob's Ladder</button>
+    <button class="btn" id="btn-free">Free Play</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"></script>
+<script>
+
+const vid       = document.getElementById('vid');
+const cv        = document.getElementById('cv');
+const ctx       = cv.getContext('2d');
+const statusEl  = document.getElementById('status');
+const patNameEl = document.getElementById('pat-name');
+const overlayEl = document.getElementById('overlay');
+const fpsEl     = document.getElementById('fps');
+const hintEl    = document.getElementById('hint');
+const guideBtn  = document.getElementById('btn-guide');
+
+let W = innerWidth, H = innerHeight;
+cv.width = W; cv.height = H;
+addEventListener('resize', () => {
+  W = innerWidth; H = innerHeight;
+  cv.width = W; cv.height = H;
+  initLoop();
+});
+
+// ─── Physics Parameters ──────────────────────────────────────────
+const N     = 36;    
+const ITERS = 6;     
+const GRAV  = 0.14;
+const DAMP  = 0.975;
+
+let px  = new Float32Array(N);   
+let py  = new Float32Array(N);   
+let opx = new Float32Array(N);   
+let opy = new Float32Array(N);   
+let pin = new Uint8Array(N);     
+let nodeOwner = new Array(N).fill(null); 
+
+let restL = 0;
+
+// ─── Interactive Tutorial System State ───────────────────────────
+let guideEnabled = false;
+let currentStep = 0;
+
+// Step sequences for dynamic training
+const tutorialSteps = [
+  {
+    msg: "Step 1: Open Loop - Put THUMBS inside the rings!",
+    targets: [
+      { id: "L0", nodeFrac: 0.2, dx: -0.22, dy: 0.1, label: "Left Thumb", hit: false },
+      { id: "R0", nodeFrac: 0.7, dx: 0.22, dy: 0.1, label: "Right Thumb", hit: false }
+    ]
+  },
+  {
+    msg: "Step 2: Stretch - Now extend your INDEX fingers into the top rings!",
+    targets: [
+      { id: "L1", nodeFrac: 0.05, dx: -0.18, dy: -0.12, label: "Left Index", hit: false },
+      { id: "R1", nodeFrac: 0.45, dx: 0.18, dy: -0.12, label: "Right Index", hit: false }
+    ]
+  },
+  {
+    msg: "Step 3: Cross Over - Bring Index fingers closer together to intertwine!",
+    targets: [
+      { id: "L1", nodeFrac: 0.12, dx: -0.06, dy: -0.05, label: "Cross Left Index", hit: false },
+      { id: "R1", nodeFrac: 0.38, dx: 0.06, dy: -0.05, label: "Cross Right Index", hit: false }
+    ]
+  }
+];
+
+function initLoop() {
+  const cx = W / 2, cy = H * 0.42, rx = W * 0.20, ry = H * 0.07;
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    px[i]  = cx + Math.cos(a) * rx;
+    py[i]  = cy + Math.sin(a) * ry;
+    opx[i] = px[i]; opy[i] = py[i];
+    pin[i] = 0; nodeOwner[i] = null;
+  }
+  const perim = 2 * Math.PI * Math.sqrt((rx*rx + ry*ry) / 2);
+  restL = perim / N;
+}
+
+function stepPhysics() {
+  for (let i = 0; i < N; i++) {
+    if (pin[i]) continue;
+    const vx = (px[i] - opx[i]) * DAMP;
+    const vy = (py[i] - opy[i]) * DAMP;
+    opx[i] = px[i]; opy[i] = py[i];
+    px[i] += vx;
+    py[i] += vy + GRAV;
+  }
+  const restL2 = restL * restL;
+  const tol2   = restL * restL * 0.0004;
+  for (let it = 0; it < ITERS; it++) {
+    for (let i = 0; i < N; i++) {
+      const j  = (i + 1) % N;
+      const dx = px[j] - px[i];
+      const dy = py[j] - py[i];
+      const d2 = dx*dx + dy*dy;
+      if (Math.abs(d2 - restL2) < tol2) continue; 
+      const d    = Math.sqrt(d2) || 0.001;
+      const corr = (d - restL) / d * 0.5;
+      if (!pin[i]) { px[i] += dx * corr; py[i] += dy * corr; }
+      if (!pin[j]) { px[j] -= dx * corr; py[j] -= dy * corr; }
+    }
+  }
+}
+
+// ─── Interaction Configuration ───────────────────────────────────
+const FINGER_TIPS = [4, 8, 12, 16, 20]; 
+const FINGER_CHAIN = [
+  [1,2,3,4],    // Thumb
+  [5,6,7,8],    // Index
+  [9,10,11,12], // Middle
+  [13,14,15,16],// Ring
+  [17,18,19,20] // Pinky
+];
+
+const CATCH_R2 = 52 * 52;   
+const HOLD_R2  = 95 * 95;   
+const SNATCH_R2 = 28 * 28; 
+
+const hookMap = new Map();
+const fingerState = {};
+
+function scx(v) { return W - v * W; }
+function scy(v) { return v * H; }
+function lmSC(lm) { return { x: scx(lm.x), y: scy(lm.y) }; }
+function dist2(ax, ay, bx, by) { const dx=ax-bx, dy=ay-by; return dx*dx + dy*dy; }
+
+function isFingerCurled(lms, fi) {
+  const chain = FINGER_CHAIN[fi];
+  const mcp = lmSC(lms[chain[0]]); 
+  const pip = lmSC(lms[chain[1]]); 
+  const tip = lmSC(lms[chain[3]]); 
+
+  if (fi === 0) {
+    const dTipPip2 = dist2(tip.x, tip.y, pip.x, pip.y);
+    return dTipPip2 < 800; 
+  }
+  const dTipMcp2 = dist2(tip.x, tip.y, mcp.x, mcp.y);
+  const dPipMcp2 = dist2(pip.x, pip.y, mcp.x, mcp.y);
+  return dTipMcp2 < dPipMcp2;
+}
+
+function processFingers(side, lms) {
+  if (!lms) {
+    for (let fi = 0; fi < 5; fi++) {
+      const id = side + fi;
+      releaseHook(id);
+      fingerState[id] = 'idle';
+    }
+    return;
+  }
+
+  for (let fi = 0; fi < 5; fi++) {
+    const id   = side + fi;
+    const tip  = lmSC(lms[FINGER_TIPS[fi]]);
+    const tx   = tip.x, ty = tip.y;
+    const isHooked = hookMap.has(id);
+    const curled = isFingerCurled(lms, fi);
+
+    if (isHooked) {
+      const entry = hookMap.get(id);
+      const ni    = entry.ni;
+      const d2ToFing = dist2(px[ni], py[ni], tx, ty);
+
+      if (curled || d2ToFing > HOLD_R2) {
+        releaseHook(id);
+        fingerState[id] = 'idle';
+        spawnBurst(tx, ty, [255, 90, 90]); 
+      } else {
+        px[ni] = tx; py[ni] = ty;
+        opx[ni] = tx; opy[ni] = ty;
+        fingerState[id] = 'drag';
+      }
+    } else {
+      fingerState[id] = 'idle';
+      if (curled) continue; 
+
+      let bestNi = -1;
+      let bestD2 = CATCH_R2;
+
+      // ─── GUIDE MODE SNAP FORCING ───
+      if (guideEnabled && tutorialSteps[currentStep]) {
+        const step = tutorialSteps[currentStep];
+        step.targets.forEach(t => {
+          if (t.id === id) {
+            const targetX = W/2 + t.dx*W;
+            const targetY = H*0.42 + t.dy*H;
+            // If your real finger is close to the target guide ring, FORCE magnetic snap
+            if (dist2(tx, ty, targetX, targetY) < 65*65) {
+              const ni = Math.round(t.nodeFrac * N) % N;
+              catchNode(id, ni, tx, ty);
+              t.hit = true;
+              spawnBurst(tx, ty, [0, 255, 150]);
+            }
+          }
+        });
+      }
+
+      // Standard tracking logic if no tutorial override hit
+      if (!hookMap.has(id)) {
+        for (let i = 0; i < N; i++) {
+          const d2 = dist2(px[i], py[i], tx, ty);
+          if (d2 < bestD2) {
+            if (nodeOwner[i] !== null) {
+              if (d2 < SNATCH_R2) { 
+                const previousOwner = nodeOwner[i];
+                releaseHook(previousOwner); 
+                bestD2 = d2;
+                bestNi = i;
+                break;
+              }
+            } else {
+              bestD2 = d2;
+              bestNi = i;
+            }
+          }
+        }
+
+        if (bestNi !== -1) {
+          fingerState[id] = 'hover';
+          if (bestD2 < (CATCH_R2 * 0.75)) {
+            catchNode(id, bestNi, tx, ty);
+            spawnBurst(tx, ty, [0, 245, 255]); 
+          }
+        }
+      }
+    }
+  }
+
+  // Check if all targets in the current step have successfully snapped to progress!
+  if (guideEnabled && tutorialSteps[currentStep]) {
+    const step = tutorialSteps[currentStep];
+    const allHit = step.targets.every(t => t.hit);
+    if (allHit) {
+      currentStep++;
+      if (currentStep >= tutorialSteps.length) {
+        hintEl.textContent = "🎉 AWESOME! Complete Layout Created! Feel free to play.";
+        patNameEl.textContent = "— Master Pattern Complete —";
+        guideEnabled = false;
+        guideBtn.textContent = "💡 Start Guide";
+      } else {
+        hintEl.textContent = tutorialSteps[currentStep].msg;
+        spawnBurst(W/2, H/2, [255, 220, 0]);
+      }
+    }
+  }
+}
+
+function catchNode(id, ni, x, y) {
+  pin[ni] = 1;
+  nodeOwner[ni] = id;
+  px[ni] = x; py[ni] = y;
+  opx[ni] = x; opy[ni] = y;
+  hookMap.set(id, { ni });
+}
+
+function releaseHook(id) {
+  if (!hookMap.has(id)) return;
+  const { ni } = hookMap.get(id);
+  pin[ni] = 0;
+  nodeOwner[ni] = null;
+  hookMap.delete(id);
+}
+
+function releaseAll() {
+  [...hookMap.keys()].forEach(id => releaseHook(id));
+  Object.keys(fingerState).forEach(k => { fingerState[k] = 'idle'; });
+}
+
+// ─── Rendering Core Engine ───────────────────────────────────────
+const MAX_P = 60;
+let particles = [];
+
+function spawnBurst(x, y, rgb) {
+  const need = Math.min(6, MAX_P - particles.length);
+  for (let i = 0; i < need; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 0.5) * 6 - 1,
+      life: 1, decay: 0.06 + Math.random() * 0.04,
+      r: 2 + Math.random() * 2.5,
+      rgb
+    });
+  }
+}
+
+const segColors = [];
+(function buildColors() {
+  for (let i = 0; i < N; i++) {
+    const t = i / N;
+    let c = t < 0.33 ? [0, 245, 255] : (t < 0.66 ? [255, 0, 200] : [255, 220, 0]);
+    segColors.push(c);
+  }
+})();
+
+function drawRope() {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.shadowBlur = 14;
+  for (let i = 0; i < N; i++) {
+    const j = (i+1)%N;
+    const [R,G,B] = segColors[i];
+    ctx.strokeStyle = `rgba(${R},${G},${B},.8)`;
+    ctx.shadowColor = `rgb(${R},${G},${B})`;
+    ctx.lineWidth   = 3.5;
+    ctx.beginPath(); ctx.moveTo(px[i],py[i]); ctx.lineTo(px[j],py[j]);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  for (let i = 0; i < N; i++) {
+    if (!pin[i]) continue;
+    ctx.save();
+    ctx.shadowColor='rgb(255,220,0)'; ctx.shadowBlur=18;
+    ctx.beginPath(); ctx.arc(px[i],py[i],6,0,Math.PI*2);
+    ctx.fillStyle='rgb(255,220,0)'; ctx.fill();
+    ctx.restore();
+  }
+}
+
+const BONES = [
+  [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],
+  [13,17],[17,18],[18,19],[19,20],[0,17]
+];
+const TIP_COLS = [[255,220,0], [0,245,255], [180,100,255], [0,255,160], [255,140,0]];
+
+function drawHand(lms, side) {
+  if (!lms) return;
+  const isLeft = side === 'L';
+  const [R,G,B] = isLeft ? [0,200,255] : [220,80,255];
+
+  ctx.save();
+  ctx.strokeStyle = `rgba(${R},${G},${B},.35)`;
+  ctx.lineWidth = 2; ctx.beginPath();
+  BONES.forEach(([a,b]) => {
+    const pa = lmSC(lms[a]), pb = lmSC(lms[b]);
+    ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y);
+  });
+  ctx.stroke();
+  ctx.restore();
+
+  for (let fi = 0; fi < 5; fi++) {
+    const id   = side + fi;
+    const tip  = lmSC(lms[FINGER_TIPS[fi]]);
+    const [TR,TG,TB] = TIP_COLS[fi];
+    const st   = fingerState[id] || 'idle';
+
+    ctx.save();
+    ctx.shadowColor = `rgb(${TR},${TG},${TB})`;
+    if (st === 'drag') {
+      ctx.shadowColor = 'rgb(255,220,0)'; ctx.shadowBlur = 24;
+      ctx.beginPath(); ctx.arc(tip.x, tip.y, 9, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+    } else if (st === 'hover') {
+      ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(tip.x, tip.y, 8, 0, Math.PI*2);
+      ctx.strokeStyle = `rgb(${TR},${TG},${TB})`; ctx.lineWidth=2; ctx.stroke();
+    } else {
+      ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(tip.x, tip.y, 5, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${TR},${TG},${TB},.7)`; ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// ─── ACTIVE DYNAMIC TARGET RENDERING ───
+function drawGuideMarkers() {
+  if (!guideEnabled || !tutorialSteps[currentStep]) return;
+  
+  const step = tutorialSteps[currentStep];
+  step.targets.forEach(t => {
+    const targetX = W / 2 + t.dx * W;
+    const targetY = H * 0.42 + t.dy * H;
+    
+    ctx.save();
+    // Glowing color swaps to green when your finger hits it successfully
+    if (t.hit) {
+      ctx.strokeStyle = 'rgba(0, 255, 150, 0.8)';
+      ctx.fillStyle = 'rgba(0, 255, 150, 0.2)';
+    } else {
+      ctx.strokeStyle = 'rgba(255, 0, 200, 0.7)';
+      ctx.fillStyle = 'rgba(255, 0, 200, 0.05)';
+    }
+    
+    ctx.lineWidth = 3;
+    ctx.setLineDash([5, 5]);
+    
+    // Pulse animation ring effect
+    const pulse = 35 + Math.sin(Date.now() * 0.007) * 4;
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, pulse, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // Ring label descriptor
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(t.label, targetX, targetY - pulse - 12);
+    ctx.restore();
+  });
+}
+
+function applyPreset(name) {
+  releaseAll(); initLoop();
+  const cx = W/2, cy = H*0.42;
+  const presets = {
+    cradle: [[0,-0.26,0.00],[0.14,-0.16,-0.12],[0.27,0.00,-0.14],[0.39,0.16,-0.12],[0.5,0.26,0.00],[0.64,0.16,0.12],[0.77,0.00,0.07],[0.89,-0.16,0.12]],
+    soldier: [[0.00,-0.28,0.02],[0.10,-0.18,-0.13],[0.20,-0.08,-0.13],[0.30,0.00,0.02],[0.40,0.10,-0.11],[0.50,0.28,0.02],[0.60,0.18,0.13],[0.70,0.08,0.13],[0.80,0.00,0.02],[0.90,-0.10,0.11]],
+    ladder: [[0.00,-0.28,0.00],[0.08,-0.20,-0.15],[0.17,-0.12,-0.15],[0.25,-0.03,0.00],[0.33,0.03,-0.13],[0.41,0.11,-0.13],[0.50,0.28,0.00],[0.58,0.20,0.15],[0.67,0.12,0.15],[0.75,0.03,0.00],[0.83,-0.03,0.13],[0.91,-0.11,0.13]]
+  };
+  const cfg = presets[name];
+  if (!cfg) return;
+  cfg.forEach(([frac,dxF,dyF]) => {
+    const ni = Math.round(frac*N)%N;
+    pin[ni]=1; px[ni]=cx+dxF*W; py[ni]=cy+dyF*H;
+    opx[ni]=px[ni]; opy[ni]=py[ni];
+  });
+  setTimeout(()=>{ for(let i=0;i<N;i++) if(nodeOwner[i]===null) pin[i]=0; },250);
+}
+
+let frame=0, fpsLast=performance.now(), fpsCount=0;
+let handData = null;
+let LH = null, RH = null;
+let shown = false;
+
+function tick() {
+  frame++; fpsCount++;
+  const now = performance.now();
+  if (now - fpsLast > 1000) {
+    fpsEl.textContent = fpsCount + ' fps';
+    fpsCount=0; fpsLast=now;
+  }
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(2,8,16,.45)'; 
+  ctx.fillRect(0,0,W,H);
+
+  LH=null; RH=null;
+  if (handData?.multiHandLandmarks?.length) {
+    handData.multiHandLandmarks.forEach((lms,i) => {
+      if (handData.multiHandedness[i]?.label==='Left') RH=lms; else LH=lms;
+    });
+  }
+
+  const both = LH && RH;
+  if (both && !shown)  { overlayEl.classList.add('gone'); shown=true; }
+  if (!both && shown)  { overlayEl.classList.remove('gone'); shown=false; }
+
+  processFingers('L', LH);
+  processFingers('R', RH);
+
+  stepPhysics();
+  drawRope();
+  drawGuideMarkers(); 
+  drawHand(LH, 'L');
+  drawHand(RH, 'R');
+
+  let pLen=0;
+  for (let i=0;i<particles.length;i++) {
+    const p=particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.life-=p.decay;
+    if(p.life<=0) continue;
+    const [R,G,B]=p.rgb;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${R},${G},${B},${p.life})`; ctx.fill();
+    particles[pLen++]=p;
+  }
+  particles.length=pLen;
+
+  const hooks = hookMap.size;
+  if(!guideEnabled) {
+     statusEl.textContent = hooks === 0 ? 'bring straight fingertips close to string' : `${hooks} finger loop hooks active`;
+  } else {
+     statusEl.textContent = `Tutorial Active - Step ${currentStep + 1}/3`;
+  }
+
+  requestAnimationFrame(tick);
+}
+
+function reset() { 
+  releaseAll(); 
+  initLoop(); 
+  patNameEl.textContent=''; 
+  if(guideEnabled) {
+    currentStep = 0;
+    tutorialSteps.forEach(s => s.targets.forEach(t => t.hit = false));
+    hintEl.textContent = tutorialSteps[0].msg;
+  }
+}
+
+document.getElementById('btn-reset')  .onclick=()=>reset();
+document.getElementById('btn-cradle') .onclick=()=>{ guideEnabled=false; guideBtn.textContent="💡 Start Guide"; reset(); applyPreset('cradle');  patNameEl.textContent='— Cat\'s Cradle —'; };
+document.getElementById('btn-soldier').onclick=()=>{ guideEnabled=false; guideBtn.textContent="💡 Start Guide"; reset(); applyPreset('soldier'); patNameEl.textContent='— Soldier\'s Bed —'; };
+document.getElementById('btn-ladder') .onclick=()=>{ guideEnabled=false; guideBtn.textContent="💡 Start Guide"; reset(); applyPreset('ladder');  patNameEl.textContent='— Jacob\'s Ladder —'; };
+document.getElementById('btn-free')   .onclick=()=>{ guideEnabled=false; guideBtn.textContent="💡 Start Guide"; reset(); patNameEl.textContent='— Free Play —'; };
+
+// Dynamic Interactive Tutorial Trigger
+guideBtn.onclick = () => {
+  guideEnabled = !guideEnabled;
+  if (guideEnabled) {
+    guideBtn.textContent = "🛑 Stop Guide";
+    currentStep = 0;
+    tutorialSteps.forEach(s => s.targets.forEach(t => t.hit = false));
+    hintEl.textContent = tutorialSteps[0].msg;
+    reset();
+  } else {
+    guideBtn.textContent = "💡 Start Guide";
+    hintEl.textContent = "Click 'START GUIDE' to begin interactive steps!";
+  }
+};
+
+initLoop();
+requestAnimationFrame(tick);
+
+(async()=>{
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{width:1280,height:720,facingMode:'user'}});
+    vid.srcObject=stream;
+    const hands=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`});
+    hands.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:.6,minTrackingConfidence:.6});
+    hands.onResults(r=>{ handData=r; });
+    const cam=new Camera(vid,{onFrame:async()=>{ await hands.send({image:vid}); },width:1280,height:720});
+    await cam.start();
+  }catch(e){ statusEl.textContent='Camera Link Error: '+e.message; }
+})();
+</script>
+</body>
+</html>
