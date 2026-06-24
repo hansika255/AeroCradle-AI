@@ -1,4 +1,4 @@
-# Cat's Cradle Pro
+# AeroCradle-AI
 
 An interactive browser-based Cat's Cradle string simulation that uses webcam hand tracking to let you hook, drag, release, and shape a virtual loop with your fingers.
 
